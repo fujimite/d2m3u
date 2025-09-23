@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   int arg_index = 1;
 
   while (arg_index < argc && argv[arg_index][0] == '-') {
-    const char *flags = argv[arg_index] + 1; // skip '-'
+    const char *flags = argv[arg_index] + 1; //skip '-'
     if (*flags == '\0') {
       fprintf(stderr, "Invalid flag: %s\n", argv[arg_index]);
       return -1;
