@@ -1,3 +1,12 @@
 CompileFlags:
-  Add:
-    - "-I/opt/homebrew/include"
+  Add: 
+    - -Wall
+    - -Wextra
+    - -O2
+    - -I/opt/homebrew/include
+    - -I/usr/include
+    - -lavformat
+    - -lavutil
+    - -lavcodec
+    - -lcurl
+    - -lm
