@@ -1,0 +1,8 @@
+BraceWrapping:
+  AfterFunction: false
+  AfterControlStatement: false
+  BeforeElse: true
+BreakBeforeBraces: Custom
+IndentWidth: 2
+ColumnLimit: 80
+CommentPragmas:  '^[^ ]'
