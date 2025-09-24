@@ -2,7 +2,7 @@
 #ifndef FILEUTILS_H
 #define FILEUTILS_H
 
-#include <ctype.h>
+#include <stddef.h>
 
 #define MAX_FILES 2048
 
