@@ -4,7 +4,7 @@ d2m3u is a command line tool to generate m3u playlists from local or web directo
 Requirements:
 - `ffmpeg` and `curl`
 Usage:
-- Clone source and run `make install` or place prebuilt binary in your path
+- Clone source and run `make install` (sudo may be required) or place prebuilt binary in your path
 - Run `d2m3u -h`
 
 Development:
