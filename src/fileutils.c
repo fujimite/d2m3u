@@ -1,5 +1,7 @@
 //fileutils.c
 #include "fileutils.h"
+#include <ctype.h>
+#include <curl/curl.h>
 #include <dirent.h>
 #include <fts.h>
 #include <pwd.h>
@@ -8,8 +10,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define MAX_FILES 2048
 
 int is_allowed_filetype(const char *filename) {
   const char *ext_list[] = {"mp3",  "wav",  "aac",  "flac", "ogg",  "wma",
@@ -40,6 +40,10 @@ int compare_files(const void *a, const void *b) {
 int is_directory(const char *path) {
   struct stat statbuf;
   return stat(path, &statbuf) == 0 && S_ISDIR(statbuf.st_mode);
+}
+
+int is_web_url(const char *path) {
+  return strncmp(path, "http://", 7) == 0 || strncmp(path, "https://", 8) == 0;
 }
 
 int scan_directory(const char *input, char *files[]) {
@@ -91,4 +95,299 @@ char *expand_path(const char *path) {
   else {
     return strdup(path);
   }
+}
+
+static size_t write_memory_callback(void *contents, size_t size, size_t nmemb,
+                                    void *userp) {
+  size_t realsize = size * nmemb;
+  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+  char *ptr = realloc(mem->memory, mem->size + realsize + 1);
+  if (!ptr) {
+    fprintf(stderr, "Not enough memory for realloc\n");
+    return 0;
+  }
+
+  mem->memory = ptr;
+  memcpy(&(mem->memory[mem->size]), contents, realsize);
+  mem->size += realsize;
+  mem->memory[mem->size] = 0;
+
+  return realsize;
+}
+
+char *extract_auth_from_url(const char *url, char **clean_url, char **username,
+                            char **password) {
+  *username = NULL;
+  *password = NULL;
+  *clean_url = NULL;
+
+  const char *proto_end = strstr(url, "://");
+  if (!proto_end) {
+    *clean_url = strdup(url);
+    return *clean_url;
+  }
+  proto_end += 3;
+
+  //detect inline auth
+  const char *at_sign = strchr(proto_end, '@');
+  if (!at_sign) {
+    *clean_url = strdup(url);
+    return *clean_url;
+  }
+
+  size_t auth_len = at_sign - proto_end;
+  char *auth = malloc(auth_len + 1);
+  strncpy(auth, proto_end, auth_len);
+  auth[auth_len] = '\0';
+
+  char *colon = strchr(auth, ':');
+  if (colon) {
+    *colon = '\0';
+    *username = strdup(auth);
+    *password = strdup(colon + 1);
+  }
+  else {
+    *username = strdup(auth);
+  }
+
+  size_t proto_len = proto_end - url;
+  size_t clean_len = proto_len + strlen(at_sign + 1) + 1;
+  *clean_url = malloc(clean_len);
+  strncpy(*clean_url, url, proto_len);
+  strcpy(*clean_url + proto_len, at_sign + 1);
+
+  free(auth);
+  return *clean_url;
+}
+
+static int parse_apache_listing(const char *html, const char *base_url,
+                                char *files[], int max_files) {
+  int count = 0;
+  const char *ptr = html;
+
+  while ((ptr = strstr(ptr, "<a href=\"")) != NULL && count < max_files) {
+    ptr += 9; //skips <a href="
+    const char *end = strchr(ptr, '"');
+    if (!end)
+      break;
+
+    size_t len = end - ptr;
+    char *filename = malloc(len + 1);
+    strncpy(filename, ptr, len);
+    filename[len] = '\0';
+
+    //skips parents
+    if (strcmp(filename, "../") != 0 && strcmp(filename, "./") != 0 &&
+        strchr(filename, '?') == NULL && is_allowed_filetype(filename)) {
+
+      size_t url_len = strlen(base_url) + strlen(filename) + 2;
+      char *full_url = malloc(url_len);
+
+      if (base_url[strlen(base_url) - 1] == '/') {
+        snprintf(full_url, url_len, "%s%s", base_url, filename);
+      }
+      else {
+        snprintf(full_url, url_len, "%s/%s", base_url, filename);
+      }
+
+      files[count++] = full_url;
+    }
+
+    free(filename);
+    ptr = end;
+  }
+
+  return count;
+}
+
+static int parse_nginx_listing(const char *html, const char *base_url,
+                               char *files[], int max_files) {
+  int count = 0;
+  const char *ptr = html;
+
+  //nginx <pre> tag
+  const char *pre_start = strstr(html, "<pre>");
+  if (pre_start) {
+    ptr = pre_start;
+  }
+
+  while ((ptr = strstr(ptr, "<a href=\"")) != NULL && count < max_files) {
+    ptr += 9; //skips <a href="
+    const char *end = strchr(ptr, '"');
+    if (!end)
+      break;
+
+    size_t len = end - ptr;
+    char *filename = malloc(len + 1);
+    strncpy(filename, ptr, len);
+    filename[len] = '\0';
+
+    if (strcmp(filename, "../") != 0 && strcmp(filename, "./") != 0 &&
+        filename[0] != '?' && is_allowed_filetype(filename)) {
+
+      size_t url_len = strlen(base_url) + strlen(filename) + 2;
+      char *full_url = malloc(url_len);
+
+      if (base_url[strlen(base_url) - 1] == '/') {
+        snprintf(full_url, url_len, "%s%s", base_url, filename);
+      }
+      else {
+        snprintf(full_url, url_len, "%s/%s", base_url, filename);
+      }
+
+      files[count++] = full_url;
+    }
+
+    free(filename);
+    ptr = end;
+  }
+
+  return count;
+}
+
+//json (untested rn)
+static int parse_json_listing(const char *json, const char *base_url,
+                              char *files[], int max_files) {
+  int count = 0;
+  const char *ptr = json;
+
+  while ((ptr = strstr(ptr, "\"name\"")) != NULL && count < max_files) {
+    ptr = strchr(ptr, ':');
+    if (!ptr)
+      break;
+    ptr++;
+
+    while (*ptr && isspace(*ptr))
+      ptr++;
+
+    if (*ptr != '"')
+      continue;
+    ptr++;
+
+    const char *end = strchr(ptr, '"');
+    if (!end)
+      break;
+
+    size_t len = end - ptr;
+    char *filename = malloc(len + 1);
+    strncpy(filename, ptr, len);
+    filename[len] = '\0';
+
+    if (is_allowed_filetype(filename)) {
+      size_t url_len = strlen(base_url) + strlen(filename) + 2;
+      char *full_url = malloc(url_len);
+
+      if (base_url[strlen(base_url) - 1] == '/') {
+        snprintf(full_url, url_len, "%s%s", base_url, filename);
+      }
+      else {
+        snprintf(full_url, url_len, "%s/%s", base_url, filename);
+      }
+
+      files[count++] = full_url;
+    }
+
+    free(filename);
+    ptr = end;
+  }
+
+  return count;
+}
+
+int scan_web_directory(const char *url, char *files[], const char *username,
+                       const char *password) {
+  CURL *curl;
+  CURLcode res;
+  struct MemoryStruct chunk;
+  int file_count = 0;
+
+  chunk.memory = malloc(1);
+  chunk.size = 0;
+
+  curl_global_init(CURL_GLOBAL_DEFAULT);
+  curl = curl_easy_init();
+
+  if (!curl) {
+    fprintf(stderr, "Failed to initialize CURL\n");
+    free(chunk.memory);
+    return -1;
+  }
+
+  char *clean_url = NULL;
+  char *url_user = NULL;
+  char *url_pass = NULL;
+  extract_auth_from_url(url, &clean_url, &url_user, &url_pass);
+
+  const char *final_user = username ? username : url_user;
+  const char *final_pass = password ? password : url_pass;
+
+  curl_easy_setopt(curl, CURLOPT_URL, clean_url);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+
+  if (final_user) {
+    curl_easy_setopt(curl, CURLOPT_USERNAME, final_user);
+    if (final_pass) {
+      curl_easy_setopt(curl, CURLOPT_PASSWORD, final_pass);
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+  }
+
+  res = curl_easy_perform(curl);
+
+  if (res != CURLE_OK) {
+    fprintf(stderr, "curl_easy_perform() failed: %s\n",
+            curl_easy_strerror(res));
+    file_count = -1;
+  }
+  else {
+    long response_code;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
+    if (response_code == 200) {
+      file_count =
+          parse_apache_listing(chunk.memory, clean_url, files, MAX_FILES);
+
+      if (file_count == 0) {
+        file_count =
+            parse_nginx_listing(chunk.memory, clean_url, files, MAX_FILES);
+      }
+
+      if (file_count == 0) {
+        file_count =
+            parse_json_listing(chunk.memory, clean_url, files, MAX_FILES);
+      }
+
+      if (file_count > 0) {
+        qsort(files, file_count, sizeof(char *), compare_files);
+      }
+      else {
+        fprintf(stderr, "No media files found in directory listing\n");
+      }
+    }
+    else if (response_code == 401) {
+      fprintf(stderr, "Authentication failed (401 Unauthorized)\n");
+      file_count = -1;
+    }
+    else {
+      fprintf(stderr, "HTTP error: %ld\n", response_code);
+      file_count = -1;
+    }
+  }
+
+  curl_easy_cleanup(curl);
+  curl_global_cleanup();
+
+  free(chunk.memory);
+  free(clean_url);
+  if (url_user)
+    free(url_user);
+  if (url_pass)
+    free(url_pass);
+
+  return file_count;
 }
