@@ -4,3 +4,4 @@ test_dir
 .vscode
 d2m3u.dSYM
 *.o
+*.zip
