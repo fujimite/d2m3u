@@ -5,3 +5,5 @@ test_dir
 d2m3u.dSYM
 *.o
 *.zip
+*.exe
+*.m3u

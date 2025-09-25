@@ -1,26 +1,54 @@
-UNAME_S := $(shell uname)
+UNAME_S := $(shell uname 2>/dev/null || echo Windows)
+
+CC = gcc
+CFLAGS = -Wall -Wextra -O2
+LDFLAGS =
 
 ifeq ($(UNAME_S),Darwin)
-  ifeq ($(shell command -v clang >/dev/null 2>&1 && echo yes),yes)
-    CC = clang
-  else ifeq ($(shell command -v gcc >/dev/null 2>&1 && echo yes),yes)
-    CC = gcc
-  else
-    $(error No suitable compiler (clang or gcc) found on macOS)
-  endif
-  CFLAGS = -Wall -Wextra -O2 -I/opt/homebrew/include
-  LDFLAGS = -lavformat -lavutil -lavcodec -lcurl -lm -L/opt/homebrew/lib
+  CC = clang
+  CFLAGS += -I/opt/homebrew/include
+  LDFLAGS += -lavformat -lavutil -lavcodec -lcurl -lm -L/opt/homebrew/lib
+  TARGET = d2m3u
 
 else ifeq ($(UNAME_S),Linux)
-  ifeq ($(shell command -v gcc >/dev/null 2>&1 && echo yes),yes)
-    CC = gcc
-  else ifeq ($(shell command -v clang >/dev/null 2>&1 && echo yes),yes)
-    CC = clang
+  CC = gcc
+  CFLAGS += -I/usr/include
+  LDFLAGS += -lavformat -lavutil -lavcodec -lcurl -lm -L/usr/lib
+  TARGET = d2m3u
+
+else ifeq ($(UNAME_S),Windows)
+  ifdef MSYSTEM
+    ifeq ($(MSYSTEM),MINGW64)
+      MSYS2_PREFIX = /mingw64
+    else ifeq ($(MSYSTEM),MINGW32)
+      MSYS2_PREFIX = /mingw32
+    else ifeq ($(MSYSTEM),UCRT64)
+      MSYS2_PREFIX = /ucrt64
+    else
+      MSYS2_PREFIX = /mingw64
+    endif
   else
-    $(error No suitable compiler (gcc or clang) found on Linux)
+    MSYS2_PREFIX = C:/msys64/mingw64
   endif
-  CFLAGS = -Wall -Wextra -O2 -I/usr/include
-  LDFLAGS = -lavformat -lavutil -lavcodec -lcurl -lm -L/usr/lib
+  
+  CC = gcc
+  CFLAGS += -I$(MSYS2_PREFIX)/include
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lavcodec -lswresample -lswscale -lcurl -lws2_32 -lwinmm -lbcrypt -lm
+  TARGET = d2m3u.exe
+
+else ifneq (,$(findstring MINGW,$(UNAME_S)))
+  MSYS2_PREFIX = /mingw64
+  CC = gcc
+  CFLAGS += -I$(MSYS2_PREFIX)/include
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lavcodec -lswresample -lswscale -lcurl -lws2_32 -lwinmm -lbcrypt -lm
+  TARGET = d2m3u.exe
+
+else ifneq (,$(findstring MSYS,$(UNAME_S)))
+  MSYS2_PREFIX = /mingw64
+  CC = gcc
+  CFLAGS += -I$(MSYS2_PREFIX)/include
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lavcodec -lswresample -lswscale -lcurl -lws2_32 -lwinmm -lbcrypt -lm
+  TARGET = d2m3u.exe
 
 else
   $(error $(UNAME_S) is unsupported by this Makefile.)
@@ -42,11 +70,28 @@ $(TARGET): $(OBJECTS)
 clean:
 	rm -f $(OBJECTS) $(TARGET)
 
+ifeq ($(UNAME_S),Linux)
 install: $(TARGET)
 	install -m 755 $(TARGET) /usr/local/bin/
 
 uninstall:
 	rm -f /usr/local/bin/$(TARGET)
+else ifeq ($(UNAME_S),Darwin)
+install: $(TARGET)
+	install -m 755 $(TARGET) /usr/local/bin/
+
+uninstall:
+	rm -f /usr/local/bin/$(TARGET)
+endif
+
+ifeq ($(TARGET),d2m3u.exe)
+install: $(TARGET)
+	@echo "On Windows, please copy $(TARGET) to a directory in your PATH"
+	@echo "For example: copy $(TARGET) to C:\Windows\System32 or C:\Users\%USERNAME%\bin"
+
+uninstall:
+	@echo "On Windows, please manually delete $(TARGET) from where you installed it"
+endif
 
 debug: CFLAGS += -g -DDEBUG
 debug: clean info $(TARGET)

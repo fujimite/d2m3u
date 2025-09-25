@@ -2,14 +2,24 @@
 #include "fileutils.h"
 #include <ctype.h>
 #include <curl/curl.h>
-#include <dirent.h>
-#include <fts.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+  #include <windows.h>
+  #include <io.h>
+  #include <direct.h>
+  #define strcasecmp _stricmp
+  #define stat _stat
+  #define S_ISDIR(mode) ((mode & _S_IFMT) == _S_IFDIR)
+#else
+  #include <dirent.h>
+  #include <fts.h>
+  #include <pwd.h>
+  #include <unistd.h>
+#endif
 
 int is_allowed_filetype(const char *filename) {
   const char *ext_list[] = {"mp3",  "wav",  "aac",  "flac", "ogg",  "wma",
@@ -46,6 +56,59 @@ int is_web_url(const char *path) {
   return strncmp(path, "http://", 7) == 0 || strncmp(path, "https://", 8) == 0;
 }
 
+#ifdef _WIN32
+static int scan_directory_recursive(const char *dir_path, char *files[], int *file_count, int max_files) {
+  WIN32_FIND_DATA find_data;
+  HANDLE find_handle;
+  char search_path[MAX_PATH];
+  char full_path[MAX_PATH];
+  
+  snprintf(search_path, sizeof(search_path), "%s\\*", dir_path);
+  
+  find_handle = FindFirstFile(search_path, &find_data);
+  if (find_handle == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+  
+  do {
+    if (strcmp(find_data.cFileName, ".") == 0 || 
+        strcmp(find_data.cFileName, "..") == 0) {
+      continue;
+    }
+    
+    snprintf(full_path, sizeof(full_path), "%s\\%s", dir_path, find_data.cFileName);
+    
+    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      scan_directory_recursive(full_path, files, file_count, max_files);
+    } else {
+      if (*file_count < max_files && is_allowed_filetype(find_data.cFileName)) {
+        files[*file_count] = strdup(full_path);
+        (*file_count)++;
+      }
+    }
+    
+    if (*file_count >= max_files) {
+      break;
+    }
+  } while (FindNextFile(find_handle, &find_data));
+  
+  FindClose(find_handle);
+  return 0;
+}
+
+int scan_directory(const char *input, char *files[]) {
+  int file_count = 0;
+  
+  scan_directory_recursive(input, files, &file_count, MAX_FILES);
+  
+  if (file_count > 0) {
+    qsort(files, file_count, sizeof(char *), compare_files);
+  }
+  
+  return file_count;
+}
+
+#else
 int scan_directory(const char *input, char *files[]) {
   int file_count = 0;
 
@@ -72,15 +135,23 @@ int scan_directory(const char *input, char *files[]) {
 
   return file_count;
 }
+#endif
 
 char *expand_path(const char *path) {
   if (path[0] == '~') {
+#ifdef _WIN32
+    const char *home = getenv("USERPROFILE");
+    if (!home) {
+      home = getenv("HOME");
+    }
+#else
     const char *home = getenv("HOME");
     if (!home) {
       struct passwd *pw = getpwuid(getuid());
       if (pw)
         home = pw->pw_dir;
     }
+#endif
 
     if (!home)
       return strdup(path);
@@ -104,7 +175,7 @@ static size_t write_memory_callback(void *contents, size_t size, size_t nmemb,
 
   char *ptr = realloc(mem->memory, mem->size + realsize + 1);
   if (!ptr) {
-    fprintf(stderr, "Not enough memory for realloc\n");
+    fprintf(stderr, "realloc ran out of memory\n");
     return 0;
   }
 
