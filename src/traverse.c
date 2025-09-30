@@ -1,5 +1,5 @@
 //fileutils.c
-#include "fileutils.h"
+#include "traverse.h"
 #include <ctype.h>
 #include <curl/curl.h>
 #include <stdio.h>
@@ -13,7 +13,6 @@
   #include <direct.h>
   #define strcasecmp _stricmp
   #define stat _stat
-  #define S_ISDIR(mode) ((mode & _S_IFMT) == _S_IFDIR)
 #else
   #include <dirent.h>
   #include <fts.h>
@@ -57,12 +56,15 @@ int is_web_url(const char *path) {
 }
 
 #ifdef _WIN32
-static int scan_directory_recursive(const char *dir_path, char *files[], int *file_count, int max_files) {
+static int scan_directory_recurse(const char *dir_path, char *files[], int *file_count, int max_files) {
   WIN32_FIND_DATA find_data;
   HANDLE find_handle;
   char search_path[MAX_PATH];
   char full_path[MAX_PATH];
   
+  if (strlen(dir_path) + 2 >= MAX_PATH) {
+    return -1;
+  }
   snprintf(search_path, sizeof(search_path), "%s\\*", dir_path);
   
   find_handle = FindFirstFile(search_path, &find_data);
@@ -73,13 +75,16 @@ static int scan_directory_recursive(const char *dir_path, char *files[], int *fi
   do {
     if (strcmp(find_data.cFileName, ".") == 0 || 
         strcmp(find_data.cFileName, "..") == 0) {
+      //skip parents
       continue;
     }
     
-    snprintf(full_path, sizeof(full_path), "%s\\%s", dir_path, find_data.cFileName);
+    if (snprintf(full_path, sizeof(full_path), "%s\\%s", dir_path, find_data.cFileName) >= MAX_PATH) {
+      continue; //skip if path truncated
+    }
     
     if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-      scan_directory_recursive(full_path, files, file_count, max_files);
+      scan_directory_recurse(full_path, files, file_count, max_files);
     } else {
       if (*file_count < max_files && is_allowed_filetype(find_data.cFileName)) {
         files[*file_count] = strdup(full_path);
@@ -99,7 +104,7 @@ static int scan_directory_recursive(const char *dir_path, char *files[], int *fi
 int scan_directory(const char *input, char *files[]) {
   int file_count = 0;
   
-  scan_directory_recursive(input, files, &file_count, MAX_FILES);
+  scan_directory_recurse(input, files, &file_count, MAX_FILES);
   
   if (file_count > 0) {
     qsort(files, file_count, sizeof(char *), compare_files);

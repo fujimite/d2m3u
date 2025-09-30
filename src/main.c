@@ -1,4 +1,4 @@
-#include "fileutils.h"
+#include "traverse.h"
 #include "writem3u.h"
 #include <getopt.h>
 #include <libavformat/avformat.h>
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
       break;
     case '8':
       //not implemented yet
-      flag_8 = 1;
+      //flag_8 = 1;
       break;
     case 'u':
       username = strdup(optarg);

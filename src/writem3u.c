@@ -12,10 +12,10 @@
 #ifdef _WIN32
   #include <windows.h>
   #include <direct.h>
-  #define PATH_MAX MAX_PATH
+  #define PATH_SEP '\\'
+  #define PATH_SEP_STR "\\"
   #define getcwd _getcwd
   #define stat _stat
-  #define S_ISDIR(mode) ((mode & _S_IFMT) == _S_IFDIR)
   #define basename win_basename
   
   static char *win_basename(char *path) {
@@ -30,6 +30,8 @@
 #else
   #include <libgen.h>
   #include <unistd.h>
+  #define PATH_SEP '/'
+  #define PATH_SEP_STR "/"
 #endif
 
 static int is_web_url(const char *path) {
@@ -161,11 +163,8 @@ int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
 
   struct stat path_stat;
   if (stat(output_file, &path_stat) == 0 && S_ISDIR(path_stat.st_mode)) {
-#ifdef _WIN32
-    snprintf(filepath, sizeof(filepath), "%s\\playlist.m3u", output_file);
-#else
-    snprintf(filepath, sizeof(filepath), "%s/playlist.m3u", output_file);
-#endif
+    snprintf(filepath, sizeof(filepath), "%s%cplaylist.m3u",
+     output_file, PATH_SEP);
   }
   else if (output_file[0] == '/' || is_web_url(output_file) 
 #ifdef _WIN32
@@ -180,11 +179,7 @@ int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
       perror("getcwd");
       return -1;
     }
-#ifdef _WIN32
-    strncat(filepath, "\\", sizeof(filepath) - strlen(filepath) - 1);
-#else
-    strncat(filepath, "/", sizeof(filepath) - strlen(filepath) - 1);
-#endif
+    strncat(filepath, PATH_SEP_STR, sizeof(filepath) - strlen(filepath) - 1);
     strncat(filepath, output_file, sizeof(filepath) - strlen(filepath) - 1);
   }
 
