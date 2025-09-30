@@ -7,13 +7,13 @@ LDFLAGS =
 ifeq ($(UNAME_S),Darwin)
   CC = clang
   CFLAGS += -I/opt/homebrew/include
-  LDFLAGS += -lavformat -lavutil -lavcodec -lcurl -lm -L/opt/homebrew/lib
+  LDFLAGS += -lavformat -lavutil -lcurl -L/opt/homebrew/lib
   TARGET = d2m3u
 
 else ifeq ($(UNAME_S),Linux)
   CC = gcc
   CFLAGS += -I/usr/include
-  LDFLAGS += -lavformat -lavutil -lavcodec -lcurl -lm -L/usr/lib
+  LDFLAGS += -lavformat -lavutil -lcurl -L/usr/lib
   TARGET = d2m3u
 
 else ifeq ($(UNAME_S),Windows)
@@ -33,21 +33,21 @@ else ifeq ($(UNAME_S),Windows)
   
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lavcodec -lswresample -lswscale -lcurl -lws2_32 -lwinmm -lbcrypt -lm
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
   TARGET = d2m3u.exe
 
 else ifneq (,$(findstring MINGW,$(UNAME_S)))
   MSYS2_PREFIX = /mingw64
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lavcodec -lswresample -lswscale -lcurl -lws2_32 -lwinmm -lbcrypt -lm
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
   TARGET = d2m3u.exe
 
 else ifneq (,$(findstring MSYS,$(UNAME_S)))
   MSYS2_PREFIX = /mingw64
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lavcodec -lswresample -lswscale -lcurl -lws2_32 -lwinmm -lbcrypt -lm
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
   TARGET = d2m3u.exe
 
 else
