@@ -2,7 +2,7 @@
 # flags: -v for gcc verbose, -g for debug symbols
 
 SRC_FILES=$(find src -type f -name "*.c")
-GCC_OPTIONS="-o d2m3u $SRC_FILES -lavformat -lavutil -lm -lcurl"
+GCC_OPTIONS="-o d2m3u $SRC_FILES -lavformat -lavutil -lcurl"
 
 while [[ $# -gt 0 ]]; do
   arg="$1"

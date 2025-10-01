@@ -43,13 +43,6 @@ else ifneq (,$(findstring MINGW,$(UNAME_S)))
   LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
   TARGET = d2m3u.exe
 
-else ifneq (,$(findstring MSYS,$(UNAME_S)))
-  MSYS2_PREFIX = /mingw64
-  CC = gcc
-  CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
-  TARGET = d2m3u.exe
-
 else
   $(error $(UNAME_S) is unsupported by this Makefile.)
 endif
