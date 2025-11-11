@@ -7,6 +7,7 @@ Note the following only applies for MacOS and Linux. For Windows instructions, p
 - `ffmpeg` and `curl`
 
 ### Usage:
+- For windows instructions, see `WINDOWS.md` (wip)
 - Clone source and run `make install` (sudo may be required) or place prebuilt binary in your path
 - Run `d2m3u -h`
 
