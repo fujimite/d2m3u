@@ -33,7 +33,7 @@ else ifeq ($(UNAME_S),Windows)
 
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32 -Wl, --as-needed
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32 -Wl,--as-needed
   TARGET = d2m3u.exe
   DIST = dist/
 
@@ -41,7 +41,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S)))
   MSYS2_PREFIX = /mingw64
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32 -Wl, --as-needed
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32 -Wl,--as-needed
   TARGET = d2m3u.exe
   DIST = dist/
 
