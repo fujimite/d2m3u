@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #define MAX_FILES 2048
+#define MAX_WEB_DEPTH 16
 
 struct MemoryStruct {
   char *memory;
