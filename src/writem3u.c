@@ -3,13 +3,36 @@
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/opt.h>
-#include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+  #include <windows.h>
+  #include <direct.h>
+  #define PATH_SEP '\\'
+  #define PATH_SEP_STR "\\"
+  #define getcwd _getcwd
+  #define stat _stat
+  #define basename win_basename
+  
+  static char *win_basename(char *path) {
+    static char fname[_MAX_FNAME];
+    static char ext[_MAX_EXT];
+    static char result[_MAX_FNAME + _MAX_EXT];
+    _splitpath(path, NULL, NULL, fname, ext);
+    strcpy(result, fname);
+    strcat(result, ext);
+    return result;
+  }
+#else
+  #include <libgen.h>
+  #include <unistd.h>
+  #define PATH_SEP '/'
+  #define PATH_SEP_STR "/"
+#endif
 
 static int is_web_url(const char *path) {
   return strncmp(path, "http://", 7) == 0 || strncmp(path, "https://", 8) == 0;
@@ -140,9 +163,14 @@ int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
 
   struct stat path_stat;
   if (stat(output_file, &path_stat) == 0 && S_ISDIR(path_stat.st_mode)) {
-    snprintf(filepath, sizeof(filepath), "%s/playlist.m3u", output_file);
+    snprintf(filepath, sizeof(filepath), "%s%cplaylist.m3u",
+     output_file, PATH_SEP);
   }
-  else if (output_file[0] == '/' || is_web_url(output_file)) {
+  else if (output_file[0] == '/' || is_web_url(output_file) 
+#ifdef _WIN32
+          || (strlen(output_file) > 1 && output_file[1] == ':') //C:\blabla 
+#endif
+         ) {
     strncpy(filepath, output_file, sizeof(filepath));
     filepath[sizeof(filepath) - 1] = '\0';
   }
@@ -151,7 +179,7 @@ int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
       perror("getcwd");
       return -1;
     }
-    strncat(filepath, "/", sizeof(filepath) - strlen(filepath) - 1);
+    strncat(filepath, PATH_SEP_STR, sizeof(filepath) - strlen(filepath) - 1);
     strncat(filepath, output_file, sizeof(filepath) - strlen(filepath) - 1);
   }
 
