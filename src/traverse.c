@@ -404,6 +404,9 @@ int scan_web_directory(const char *url, char *files[], const char *username,
   curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+  #ifdef _WIN32
+  curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+  #endif
 
   if (final_user) {
     curl_easy_setopt(curl, CURLOPT_USERNAME, final_user);
