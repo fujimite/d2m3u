@@ -1,5 +1,5 @@
 UNAME_S := $(shell uname 2>/dev/null || echo Windows)
-
+TARGET = d2m3u
 CC = gcc
 CFLAGS = -Wall -Wextra -O2
 LDFLAGS =
@@ -30,24 +30,25 @@ else ifeq ($(UNAME_S),Windows)
   else
     MSYS2_PREFIX = C:/msys64/mingw64
   endif
-  
+
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32 -Wl, --as-needed
   TARGET = d2m3u.exe
+  DIST = dist/
 
 else ifneq (,$(findstring MINGW,$(UNAME_S)))
   MSYS2_PREFIX = /mingw64
   CC = gcc
   CFLAGS += -I$(MSYS2_PREFIX)/include
-  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32
+  LDFLAGS += -L$(MSYS2_PREFIX)/lib -lavformat -lavutil -lcurl -lws2_32 -Wl, --as-needed
   TARGET = d2m3u.exe
+  DIST = dist/
 
 else
   $(error $(UNAME_S) is unsupported by this Makefile.)
 endif
 
-TARGET = d2m3u
 SRC_DIR = src
 SOURCES = $(shell find $(SRC_DIR) -type f -name "*.c")
 OBJECTS = $(SOURCES:.c=.o)
@@ -61,7 +62,7 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -rf $(OBJECTS) $(TARGET) $(DIST)
 
 ifeq ($(UNAME_S),Linux)
 install: $(TARGET)
@@ -69,6 +70,7 @@ install: $(TARGET)
 
 uninstall:
 	rm -f /usr/local/bin/$(TARGET)
+
 else ifeq ($(UNAME_S),Darwin)
 install: $(TARGET)
 	install -m 755 $(TARGET) /usr/local/bin/
@@ -78,12 +80,20 @@ uninstall:
 endif
 
 ifeq ($(TARGET),d2m3u.exe)
-install: $(TARGET)
-	@echo "On Windows, please copy $(TARGET) to a directory in your PATH"
-	@echo "For example: copy $(TARGET) to C:\Windows\System32 or C:\Users\%USERNAME%\bin"
+install: installer
+	start d2m3u-setup.exe
 
 uninstall:
-	@echo "On Windows, please manually delete $(TARGET) from where you installed it"
+	@echo "On Windows, you will need to go to programs & features, then run the uninstaller."
+
+dist: $(TARGET)
+	mkdir -p dist
+	cp $(TARGET) dist/
+	ldd $(TARGET) | grep '$(MSYS2_PREFIX)' | awk '{print $$3}' | xargs -I{} cp {} dist/
+
+installer: dist
+	makensis installer.nsi
+	rm -rf dist
 endif
 
 debug: CFLAGS += -g -DDEBUG
@@ -101,4 +111,4 @@ info:
 	@echo "OBJECTS:  $(OBJECTS)"
 	@echo "TARGET:   $(TARGET)"
 
-.PHONY: all clean install uninstall debug verbose info
+.PHONY: all clean install uninstall debug verbose info dist installer

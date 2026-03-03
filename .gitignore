@@ -8,3 +8,4 @@ d2m3u.dSYM
 *.exe
 *.m3u
 *.code-workspace
+dist/
