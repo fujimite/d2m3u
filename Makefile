@@ -22,8 +22,6 @@ else ifeq ($(UNAME_S),Windows)
       MSYS2_PREFIX = /mingw64
     else ifeq ($(MSYSTEM),MINGW32)
       MSYS2_PREFIX = /mingw32
-    else ifeq ($(MSYSTEM),UCRT64)
-      MSYS2_PREFIX = /ucrt64
     else
       MSYS2_PREFIX = /mingw64
     endif
@@ -61,8 +59,13 @@ $(TARGET): $(OBJECTS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+ifeq ($(TARGET),d2m3u.exe)
 clean:
-	rm -rf $(OBJECTS) $(TARGET) $(DIST)
+	rm -rf $(OBJECTS) $(TARGET) $(DIST) d2m3u-setup.exe
+else
+clean:
+	rm -rf $(OBJECTS) $(TARGET)
+endif
 
 ifeq ($(UNAME_S),Linux)
 install: $(TARGET)
