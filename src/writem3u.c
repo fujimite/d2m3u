@@ -17,6 +17,7 @@
   #define getcwd _getcwd
   #define stat _stat
   #define basename win_basename
+  #define strcasecmp _stricmp
 
   static char *win_basename(char *path) {
     static char fname[_MAX_FNAME];
@@ -80,8 +81,7 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
     char *modified_url = NULL;
 
     if (is_web_url(files[i])) {
-      av_dict_set(&options, "timeout", "10000000",
-                  0); // 10s
+      av_dict_set(&options, "timeout", "10000000", 0); // 10s
       av_dict_set(&options, "user_agent", "libavformat", 0);
 
       if (username && password) {
@@ -179,17 +179,24 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
 
 int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
               const char *username, const char *password) {
-  char filepath[PATH_MAX];
+  char filepath[PATH_MAX * 2 + 16];
 
   const char *output_file =
       (filename && strlen(filename) > 0) ? filename : "playlist.m3u";
 
+  char output_file_buf[PATH_MAX];
+  if (strlen(output_file) < 4 ||
+      strcasecmp(output_file + strlen(output_file) - 4, ".m3u") != 0) {
+    snprintf(output_file_buf, sizeof(output_file_buf), "%s.m3u", output_file);
+    output_file = output_file_buf;
+  }
+
   struct stat path_stat;
   if (stat(output_file, &path_stat) == 0 && S_ISDIR(path_stat.st_mode)) {
     snprintf(filepath, sizeof(filepath), "%s%cplaylist.m3u",
-     output_file, PATH_SEP);
+             output_file, PATH_SEP);
   }
-  else if (output_file[0] == '/' || is_web_url(output_file)
+  else if (output_file[0] == '/'
 #ifdef _WIN32
           || (strlen(output_file) > 1 && output_file[1] == ':') //C:\blabla
 #endif
@@ -394,7 +401,7 @@ int write_m3u_split(char *files[], int file_count, const char *output_dir,
     for (int k = 0; k < media_count; k++) {
       media_file *mf = &mfs[k];
       fprintf(fp, "#EXTINF:%.0f,%s\n",
-              mf->duration > 0 ? mf->duration : -1,
+              mf->duration > 0 ? mf->duration : -1.0,
               mf->title ? mf->title : mf->filename);
 
       if (embed_auth && is_web_url(mf->path) && username && password) {

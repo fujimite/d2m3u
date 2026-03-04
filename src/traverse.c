@@ -160,7 +160,8 @@ char *expand_path(const char *path) {
     if (!home)
       return strdup(path);
 
-    char *expanded = malloc(strlen(home) + strlen(path));
+    // home + (path+1) + NUL: path+1 skips '~', so strlen(home) + strlen(path) - 1 + 1
+    char *expanded = malloc(strlen(home) + strlen(path) + 1);
     if (!expanded)
       return NULL;
 
@@ -256,6 +257,13 @@ static int parse_hrefs(const char *html, const char *base_url,
       break;
 
     size_t len = end - ptr;
+
+    // Skip empty hrefs to avoid href[-1] access below
+    if (len == 0) {
+      ptr = end;
+      continue;
+    }
+
     char *href = malloc(len + 1);
     strncpy(href, ptr, len);
     href[len] = '\0';
@@ -317,6 +325,7 @@ static int parse_hrefs(const char *html, const char *base_url,
   return count;
 }
 
+//caller needs to free chunk
 static int fetch_url(CURL *curl, const char *url, struct MemoryStruct *chunk) {
   chunk->memory = malloc(1);
   chunk->size = 0;
@@ -378,12 +387,12 @@ static void scan_web_directory_recursive(CURL *curl, const char *url,
 
   free(chunk.memory);
 
+  int appended = 0;
   for (int i = 0; i < page_file_count && *file_count < max_files; i++) {
     files[(*file_count)++] = page_files[i];
+    appended++;
   }
-
-  for (int i = *file_count < max_files ? page_file_count : max_files - (*file_count - page_file_count);
-       i < page_file_count; i++) {
+  for (int i = appended; i < page_file_count; i++) {
     free(page_files[i]);
   }
 
@@ -434,7 +443,7 @@ int scan_web_directory(const char *url, char *files[], const char *username,
 
   if (file_count > 0) {
     qsort(files, file_count, sizeof(char *), compare_files);
-  } else if (file_count == 0) {
+  } else {
     fprintf(stderr, "No media files found in directory listing\n");
     file_count = -1;
   }
