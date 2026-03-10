@@ -1,0 +1,4 @@
+This software uses libraries from the FFmpeg project under the LGPLv2.1
+The windows version redistributes unchanged libraries from MSYS2.
+The source code is available at https://ffmpeg.org/download.html#get-sources
+All dlls can be found in the program installation folder along with this license.

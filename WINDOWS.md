@@ -10,3 +10,7 @@ Windows instructions:
 ### Usage
 - Run `make install` to install.
 - Alternativerly, run `make installer` to just build the installer exe.
+
+### Licensing
+- On Windows, the installer redistributes unmodified `curl` and `ffmpeg` (`avformat`, `avutil`, and `avcodec`) libraries from MSYS2.
+- Licensing information can be found in the install directory.

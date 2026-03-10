@@ -1,7 +1,7 @@
 !include "WinMessages.nsh"
 
 !define APP_NAME "d2m3u"
-!define APP_VERSION "0.3.1"
+!define APP_VERSION "0.3.2"
 !define INSTALL_DIR "$PROGRAMFILES64\d2m3u"
 !define UNINSTALLER "uninstall.exe"
 
@@ -22,6 +22,7 @@ Section "Install"
     SetOutPath "$INSTDIR"
     File "dist\d2m3u.exe"
     File "dist\*.dll"
+    File "licenses-win\*"
 
     WriteUninstaller "$INSTDIR\${UNINSTALLER}"
 
