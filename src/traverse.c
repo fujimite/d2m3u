@@ -1,4 +1,4 @@
-//fileutils.c
+//traverse.c
 #include "traverse.h"
 #include <ctype.h>
 #include <curl/curl.h>

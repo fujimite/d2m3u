@@ -1,7 +1,7 @@
 !include "WinMessages.nsh"
 
 !define APP_NAME "d2m3u"
-!define APP_VERSION "0.3"
+!define APP_VERSION "0.3.1"
 !define INSTALL_DIR "$PROGRAMFILES64\d2m3u"
 !define UNINSTALLER "uninstall.exe"
 
