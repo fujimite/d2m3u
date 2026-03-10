@@ -6,7 +6,7 @@ For prebuilt binaries, see the releases page.
 Note the following only applies for MacOS and Linux. For Windows instructions, please see `WINDOWS.md`
 
 ### Requirements:
-- `ffmpeg` and `curl`
+- `make`, `ffmpeg` and `curl`
 
 ### Usage:
 - For windows instructions, see `WINDOWS.md`
