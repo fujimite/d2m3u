@@ -22,7 +22,9 @@ Section "Install"
     SetOutPath "$INSTDIR"
     File "dist\d2m3u.exe"
     File "dist\*.dll"
-    File "licenses-win\*"
+
+    SetOutPath "$INSTDIR\licenses"
+    File "dist\licenses\*"
 
     WriteUninstaller "$INSTDIR\${UNINSTALLER}"
 
@@ -51,6 +53,8 @@ SectionEnd
 Section "Uninstall"
     Delete "$INSTDIR\d2m3u.exe"
     Delete "$INSTDIR\*.dll"
+    Delete "$INSTDIR\licenses\*"
+    RMDir "$INSTDIR\licenses"
     Delete "$INSTDIR\${UNINSTALLER}"
     RMDir "$INSTDIR"
 

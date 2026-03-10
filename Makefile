@@ -90,9 +90,10 @@ uninstall:
 	@echo "On Windows, you will need to go to programs & features, then run the uninstaller."
 
 dist: $(TARGET)
-	mkdir -p dist
+	mkdir -p dist/licenses
 	cp $(TARGET) dist/
 	ldd $(TARGET) | grep '$(MSYS2_PREFIX)' | awk '{print $$3}' | xargs -I{} cp {} dist/
+	cp licenses-win/* dist/licenses/
 
 installer: dist
 	makensis installer.nsi
