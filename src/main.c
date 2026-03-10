@@ -12,6 +12,7 @@ int main(int argc, char *argv[]) {
   int flag_verbose = 0;
   int flag_8 = 0; //unused currently. to determine unicode-8 (m3u8) encoding
   int flag_embed_auth = 0;
+  int flag_split = 0;
   const char *input = NULL;
   const char *output_filename = NULL;
   char *username = NULL;
@@ -20,16 +21,17 @@ int main(int argc, char *argv[]) {
   static struct option long_options[] = {
       {"verbose", no_argument, 0, 'v'},
       {"utf8", no_argument, 0, '8'},
+      {"embed-auth", no_argument, 0, 'e'},
+      {"split", no_argument, 0, 's'},
       {"username", required_argument, 0, 'u'},
       {"password", required_argument, 0, 'p'},
-      {"embed-auth", no_argument, 0, 'e'},
       {"help", no_argument, 0, 'h'},
       {0, 0, 0, 0}};
 
   int opt;
   int option_index = 0;
 
-  while ((opt = getopt_long(argc, argv, "v8u:p:eh", long_options,
+  while ((opt = getopt_long(argc, argv, "v8u:p:esh", long_options,
                             &option_index)) != -1) {
     switch (opt) {
     case 'v':
@@ -48,6 +50,9 @@ int main(int argc, char *argv[]) {
     case 'e':
       flag_embed_auth = 1;
       break;
+    case 's':
+      flag_split = 1;
+      break;
     case 'h':
       print_usage(argv[0]);
       return 0;
@@ -57,7 +62,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Check for required arguments
   if (optind >= argc) {
     fprintf(
         stderr,
@@ -167,30 +171,40 @@ int main(int argc, char *argv[]) {
     printf("Found %d media files.\n", file_count);
   }
 
-  int media_count;
-  media_file *mfs = collect_media_info(files, file_count, &media_count,
-                                       final_username, final_password);
-  if (!mfs || media_count == 0) {
-    fprintf(stderr, "Failed to collect media info.\n");
-    if (username)
-      free(username);
-    if (password)
-      free(password);
-    if (final_username != username && final_username)
-      free(final_username);
-    if (final_password != password && final_password)
-      free(final_password);
-    return -1;
+  int result = 0;
+
+  int input_is_dir = is_directory(input) || is_web_url(input);
+  if (flag_split && input_is_dir) {
+    result = write_m3u_split(files, file_count, output_filename, flag_embed_auth,
+                             final_username, final_password, flag_verbose);
+  }
+  else {
+    int media_count;
+    media_file *mfs = collect_media_info(files, file_count, &media_count,
+                                         final_username, final_password);
+    if (!mfs || media_count == 0) {
+      fprintf(stderr, "Failed to collect media info.\n");
+      if (username)
+        free(username);
+      if (password)
+        free(password);
+      if (final_username != username && final_username)
+        free(final_username);
+      if (final_password != password && final_password)
+        free(final_password);
+      return -1;
+    }
+
+    result = write_m3u(mfs, media_count, output_filename, flag_embed_auth,
+                       final_username, final_password);
+
+    if (result == 0 && flag_verbose) {
+      printf("Playlist created successfully.\n");
+    }
+
+    free_media_files(mfs, media_count);
   }
 
-  int result = write_m3u(mfs, media_count, output_filename, flag_embed_auth,
-                         final_username, final_password);
-
-  if (result == 0 && flag_verbose) {
-    printf("Playlist created successfully.\n");
-  }
-
-  free_media_files(mfs, media_count);
   for (int i = 0; i < file_count; i++) {
     free(files[i]);
   }
@@ -218,5 +232,6 @@ void print_usage(const char *name) {
   printf("  -u, --username USER    Username for HTTP authentication\n");
   printf("  -p, --password PASS    Password for HTTP authentication\n");
   printf("  -e, --embed-auth       Embed username/password in playlist URLs\n");
+  printf("  -s, --split            Split into one playlist per folder\n");
   printf("  -h, --help             Show this help message\n");
 }

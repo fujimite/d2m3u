@@ -1,10 +1,11 @@
-//fileutils.h
-#ifndef FILEUTILS_H
-#define FILEUTILS_H
+//traverse.h
+#ifndef TRAVERSE_H
+#define TRAVERSE_H
 
 #include <stddef.h>
 
 #define MAX_FILES 2048
+#define MAX_WEB_DEPTH 4
 
 struct MemoryStruct {
   char *memory;
@@ -22,4 +23,4 @@ int scan_web_directory(const char *url, char *files[], const char *username,
 char *extract_auth_from_url(const char *url, char **clean_url, char **username,
                             char **password);
 
-#endif //FILEUTILS_H
+#endif //TRAVERSE_H

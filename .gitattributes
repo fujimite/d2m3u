@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.nsi text eol=crlf
+*.sh text eol=lf
+*.md text eol=lf
+WINDOWS.md text eol=crlf
