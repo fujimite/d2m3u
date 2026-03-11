@@ -6,7 +6,7 @@
 !define UNINSTALLER "uninstall.exe"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "d2m3u-setup.exe"
+OutFile "d2m3u-setup-${APP_VERSION}.exe"
 InstallDir "${INSTALL_DIR}"
 RequestExecutionLevel admin
 ShowInstDetails show
