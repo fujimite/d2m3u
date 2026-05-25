@@ -115,4 +115,4 @@ info:
 	@echo "OBJECTS:  $(OBJECTS)"
 	@echo "TARGET:   $(TARGET)"
 
-.PHONY: all clean install uninstall debug verbose info dist installer
+.PHONY: all clean install uninstall debug verbose info installer
