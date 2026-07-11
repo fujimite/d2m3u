@@ -4,7 +4,7 @@ Windows instructions:
 ### Development
 - Install and set up MSYS2.
 - Open the MinGW64 terminal (NOT MSYS2) and install the following:
-- `mingw-w64-x86_64-gcc` `mingw-w64-x86_64-curl` `mingw-w64-x86_64-ffmpeg`
+- `mingw-w64-x86_64-gcc` `mingw-w64-x86_64-curl` `mingw-w64-x86_64-ffmpeg` `mingw-w64-x86_64-nsis`
 - Build inside the MinGW64 terminal with `make`
 
 ### Usage
