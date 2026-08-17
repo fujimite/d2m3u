@@ -3,6 +3,7 @@
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/opt.h>
+#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +38,39 @@
 
 static int is_web_url(const char *path) {
   return strncmp(path, "http://", 7) == 0 || strncmp(path, "https://", 8) == 0;
+}
+
+//percent decoder
+static char *url_decode(const char *src) {
+  size_t len = strlen(src);
+  char *out = malloc(len + 1);
+  if (!out)
+    return NULL;
+
+  size_t j = 0;
+  for (size_t i = 0; i < len; i++) {
+    if (src[i] == '%' && i + 2 < len &&
+        isxdigit((unsigned char)src[i + 1]) &&
+        isxdigit((unsigned char)src[i + 2])) {
+      char hex[3] = { src[i + 1], src[i + 2], '\0' };
+      out[j++] = (char)strtol(hex, NULL, 16);
+      i += 2;
+    }
+    else if (src[i] == '+') {
+      out[j++] = ' ';
+    }
+    else {
+      out[j++] = src[i];
+    }
+  }
+  out[j] = '\0';
+  return out;
+}
+
+static void strip_extension(char *name) {
+  char *dot = strrchr(name, '.');
+  if (dot && dot != name)
+    *dot = '\0';
 }
 
 static char *dir_of(const char *path) {
@@ -143,7 +177,10 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
         char *query = strchr(filename, '?');
         if (query)
           *query = '\0';
-        mf->filename = filename;
+        //decode escapes for title display; mf->path keeps raw
+        char *decoded = url_decode(filename);
+        free(filename);
+        mf->filename = decoded ? decoded : strdup(last_slash + 1);
       }
       else {
         mf->filename = strdup("webstream");
@@ -154,6 +191,7 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
       mf->filename = strdup(basename(path_copy));
       free(path_copy);
     }
+    strip_extension(mf->filename);
 
     mf->duration = (double)context->duration / AV_TIME_BASE;
 
