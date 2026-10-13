@@ -1,4 +1,7 @@
+#include "media.h"
 #include "traverse.h"
+#include "url.h"
+#include "web.h"
 #include "writem3u.h"
 #include <getopt.h>
 #include <libavformat/avformat.h>
