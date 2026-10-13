@@ -104,33 +104,16 @@ int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
       fprintf(fp, "%s", mf->filename);
     fprintf(fp, "\n");
 
-    if (embed_auth && is_web_url(mf->path) && username && password) {
-      const char *auth_start = strstr(mf->path, "://");
-      if (auth_start) {
-        auth_start += 3;
-        const char *at_sign = strchr(auth_start, '@');
-
-        if (at_sign) {
-          fprintf(fp, "%s\n", mf->path);
-        }
-        else {
-          const char *proto_end = strstr(mf->path, "://") + 3;
-          size_t proto_len = proto_end - mf->path;
-          fprintf(fp, "%.*s%s:%s@%s\n", (int)proto_len, mf->path, username,
-                  password, proto_end);
-        }
-      }
-      else {
-        fprintf(fp, "%s\n", mf->path);
-      }
-    }
-    else {
-      fprintf(fp, "%s\n", mf->path);
-    }
+    char *auth_url =
+        embed_auth ? embed_auth_in_url(mf->path, username, password) : NULL;
+    fprintf(fp, "%s\n", auth_url ? auth_url : mf->path);
+    if (auth_url)
+      free(auth_url);
   }
 
   fclose(fp);
 
+  //still need to make verbose mode useful kw
   //printf("Playlist written to: %s\n", filepath);
   return 0;
 }
@@ -270,28 +253,11 @@ int write_m3u_split(char *files[], int file_count, const char *output_dir,
               mf->duration > 0 ? mf->duration : -1.0,
               mf->title ? mf->title : mf->filename);
 
-      if (embed_auth && is_web_url(mf->path) && username && password) {
-        const char *auth_start = strstr(mf->path, "://");
-        if (auth_start) {
-          auth_start += 3;
-          const char *at_sign = strchr(auth_start, '@');
-          if (at_sign) {
-            fprintf(fp, "%s\n", mf->path);
-          }
-          else {
-            const char *proto_end = strstr(mf->path, "://") + 3;
-            size_t proto_len = proto_end - mf->path;
-            fprintf(fp, "%.*s%s:%s@%s\n", (int)proto_len, mf->path,
-                    username, password, proto_end);
-          }
-        }
-        else {
-          fprintf(fp, "%s\n", mf->path);
-        }
-      }
-      else {
-        fprintf(fp, "%s\n", mf->path);
-      }
+      char *auth_url =
+          embed_auth ? embed_auth_in_url(mf->path, username, password) : NULL;
+      fprintf(fp, "%s\n", auth_url ? auth_url : mf->path);
+      if (auth_url)
+        free(auth_url);
     }
 
     fclose(fp);

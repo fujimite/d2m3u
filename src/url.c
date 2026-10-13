@@ -1,5 +1,6 @@
 //url.c
 #include "url.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -50,4 +51,23 @@ char *extract_auth_from_url(const char *url, char **clean_url, char **username,
 
   free(auth);
   return *clean_url;
+}
+
+//returns null if there is nothing to embed. caller needs to free result
+char *embed_auth_in_url(const char *url, const char *username,
+                        const char *password) {
+  if (!is_web_url(url) || !username || !password)
+    return NULL;
+
+  const char *proto_end = strstr(url, "://") + 3;
+  if (strchr(proto_end, '@'))
+    return NULL;
+
+  size_t proto_len = proto_end - url;
+  size_t new_url_len = strlen(url) + strlen(username) + strlen(password) + 10;
+
+  char *new_url = malloc(new_url_len);
+  snprintf(new_url, new_url_len, "%.*s%s:%s@%s", (int)proto_len, url, username,
+           password, proto_end);
+  return new_url;
 }

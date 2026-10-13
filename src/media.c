@@ -47,29 +47,10 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
       av_dict_set(&options, "timeout", "10000000", 0); // 10s
       av_dict_set(&options, "user_agent", "libavformat", 0);
 
-      if (username && password) {
-        //ffmpeg requires embedded credentials
-        const char *auth_start = strstr(files[i], "://");
-        if (auth_start) {
-          auth_start += 3;
-          const char *at_sign = strchr(auth_start, '@');
-
-          if (at_sign) {
-            url_to_open = files[i];
-          }
-          else {
-            const char *proto_end = strstr(files[i], "://") + 3;
-            size_t proto_len = proto_end - files[i];
-            size_t new_url_len =
-                strlen(files[i]) + strlen(username) + strlen(password) + 10;
-
-            modified_url = malloc(new_url_len);
-            snprintf(modified_url, new_url_len, "%.*s%s:%s@%s", (int)proto_len,
-                     files[i], username, password, proto_end);
-            url_to_open = modified_url;
-          }
-        }
-      }
+      //ffmpeg requires embedded credentials
+      modified_url = embed_auth_in_url(files[i], username, password);
+      if (modified_url)
+        url_to_open = modified_url;
     }
 
     if (avformat_open_input(&context, url_to_open, NULL, &options) != 0) {
