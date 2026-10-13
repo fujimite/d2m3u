@@ -69,7 +69,7 @@ uninstall:
 endif
 ifeq ($(TARGET),d2m3u.exe)
 install: installer
-	start d2m3u-setup.exe
+	start d2m3u-setup-$(VERSION).exe
 uninstall:
 	@echo "On Windows, you will need to go to programs & features, then run the uninstaller."
 dist: $(TARGET)
