@@ -67,6 +67,9 @@ char *embed_auth_in_url(const char *url, const char *username,
   size_t new_url_len = strlen(url) + strlen(username) + strlen(password) + 10;
 
   char *new_url = malloc(new_url_len);
+  if (!new_url)
+    return NULL;
+
   snprintf(new_url, new_url_len, "%.*s%s:%s@%s", (int)proto_len, url, username,
            password, proto_end);
   return new_url;

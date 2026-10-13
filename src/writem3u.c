@@ -43,6 +43,19 @@ static char *dir_of(const char *path) {
   return dir;
 }
 
+static void write_m3u_entry(FILE *fp, media_file *mf, int embed_auth,
+                            const char *username, const char *password) {
+  //fallback to filename if no title
+  fprintf(fp, "#EXTINF:%.0f,%s\n", mf->duration > 0 ? mf->duration : -1.0,
+          mf->title ? mf->title : mf->filename);
+
+  char *auth_url =
+      embed_auth ? embed_auth_in_url(mf->path, username, password) : NULL;
+  fprintf(fp, "%s\n", auth_url ? auth_url : mf->path);
+  if (auth_url)
+    free(auth_url);
+}
+
 int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
               const char *username, const char *password) {
   char filepath[PATH_MAX * 2 + 16];
@@ -88,27 +101,7 @@ int write_m3u(media_file mfs[], int count, const char *filename, int embed_auth,
   fprintf(fp, "#EXTM3U\n");
 
   for (int i = 0; i < count; i++) {
-    media_file *mf = &mfs[i];
-
-    if (mf->duration > 0) {
-      fprintf(fp, "#EXTINF:%.0f,", mf->duration);
-    }
-    else {
-      fprintf(fp, "#EXTINF:-1,");
-    }
-
-    //fallback to filename if no title
-    if (mf->title)
-      fprintf(fp, "%s", mf->title);
-    else
-      fprintf(fp, "%s", mf->filename);
-    fprintf(fp, "\n");
-
-    char *auth_url =
-        embed_auth ? embed_auth_in_url(mf->path, username, password) : NULL;
-    fprintf(fp, "%s\n", auth_url ? auth_url : mf->path);
-    if (auth_url)
-      free(auth_url);
+    write_m3u_entry(fp, &mfs[i], embed_auth, username, password);
   }
 
   fclose(fp);
@@ -248,16 +241,7 @@ int write_m3u_split(char *files[], int file_count, const char *output_dir,
 
     fprintf(fp, "#EXTM3U\n");
     for (int k = 0; k < media_count; k++) {
-      media_file *mf = &mfs[k];
-      fprintf(fp, "#EXTINF:%.0f,%s\n",
-              mf->duration > 0 ? mf->duration : -1.0,
-              mf->title ? mf->title : mf->filename);
-
-      char *auth_url =
-          embed_auth ? embed_auth_in_url(mf->path, username, password) : NULL;
-      fprintf(fp, "%s\n", auth_url ? auth_url : mf->path);
-      if (auth_url)
-        free(auth_url);
+      write_m3u_entry(fp, &mfs[k], embed_auth, username, password);
     }
 
     fclose(fp);
