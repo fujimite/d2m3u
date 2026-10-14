@@ -16,6 +16,5 @@ Note the following only applies for MacOS and Linux. For Windows instructions, p
 ### Development 
 - Install the following:
   - Ubuntu/Debian: `libavformat-dev` `libavcodec-dev` `libavutil-dev` `libcurl4-openssl-dev`
-  - Fedora: `ffmpeg-devel` `libcurl-devel`
   - macOS: `ffmpeg` `curl`
 - Build with `make` or `build.sh`
