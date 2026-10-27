@@ -53,6 +53,40 @@ char *extract_auth_from_url(const char *url, char **clean_url, char **username,
   return *clean_url;
 }
 
+static int hex_value(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return -1;
+}
+
+//decodes percent encoding except escape chars. caller needs to free result
+char *decode_url_name(const char *name) {
+  size_t len = strlen(name);
+  char *decoded = malloc(len + 1);
+  if (!decoded)
+    return NULL;
+
+  size_t out = 0;
+  for (size_t i = 0; i < len; i++) {
+    if (name[i] == '%' && hex_value(name[i + 1]) >= 0 &&
+        hex_value(name[i + 2]) >= 0) {
+      int value = hex_value(name[i + 1]) * 16 + hex_value(name[i + 2]);
+      if (value >= 0x20 && value != 0x7f) {
+        decoded[out++] = (char)value;
+        i += 2;
+        continue;
+      }
+    }
+    decoded[out++] = name[i];
+  }
+  decoded[out] = '\0';
+  return decoded;
+}
+
 //returns null if there is nothing to embed. caller needs to free result
 char *embed_auth_in_url(const char *url, const char *username,
                         const char *password) {

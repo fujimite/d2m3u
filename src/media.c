@@ -25,6 +25,29 @@
   #include <libgen.h>
 #endif
 
+static char *clean_title(char *text) {
+  if (!text)
+    return NULL;
+
+  for (char *p = text; *p; p++) {
+    if ((unsigned char)*p < 0x20 || *p == 0x7f)
+      *p = ' ';
+  }
+
+  size_t start = strspn(text, " ");
+  size_t len = strlen(text + start);
+  while (len > 0 && text[start + len - 1] == ' ')
+    len--;
+
+  if (len == 0) {
+    free(text);
+    return NULL;
+  }
+  memmove(text, text + start, len);
+  text[len] = '\0';
+  return text;
+}
+
 media_file *collect_media_info(char *files[], int n, int *out_count,
                                const char *username, const char *password) {
   media_file *mfs = malloc(n * sizeof(media_file));
@@ -87,6 +110,13 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
         char *query = strchr(filename, '?');
         if (query)
           *query = '\0';
+
+        //decode is for displayname only
+        char *decoded = decode_url_name(filename);
+        if (decoded) {
+          free(filename);
+          filename = decoded;
+        }
         mf->filename = filename;
       }
       else {
@@ -108,7 +138,7 @@ media_file *collect_media_info(char *files[], int n, int *out_count,
 
     AVDictionaryEntry *title_entry =
         av_dict_get(context->metadata, "title", NULL, 0);
-    mf->title = title_entry ? strdup(title_entry->value) : NULL;
+    mf->title = clean_title(title_entry ? strdup(title_entry->value) : NULL);
 
     avformat_close_input(&context);
     av_dict_free(&options);
