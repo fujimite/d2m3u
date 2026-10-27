@@ -1,0 +1,21 @@
+name: Notify GUI repo
+
+on:
+  push:
+    branches: [trunk]
+
+permissions: {}
+
+jobs:
+  notify:
+    name: Trigger submodule update in d2m3u-win-gui
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send repository_dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GUI_REPO_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh api repos/fujimite/d2m3u-win-gui/dispatches \
+            -f event_type=d2m3u-updated \
+            -f "client_payload[sha]=$SHA"
